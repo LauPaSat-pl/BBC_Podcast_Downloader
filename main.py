@@ -4,6 +4,11 @@ from datetime import datetime
 import requests as requests
 
 
+def remove_forbidden_chars(name: str):
+	forbidden_chars = ['<','>',':','"','/','\\','|','?','*']
+	return name.translate({ord(x): '' for x in forbidden_chars})
+
+
 def get_download_links(data, high_quality=False):
 	"""
 	Function to get download links from given site
@@ -38,10 +43,10 @@ def load_data():
 	return podcasts_urls
 
 
-def get_podcasts(name, url, last_download: datetime, high_quality=False):
+def get_podcasts(series_name, url, last_download: datetime, high_quality=False):
 	"""
 	Function to download podcasts and save them
-	:param name: Series title
+	:param series_name: Series title
 	:param url: URL to series download page
 	:param last_download: Date on which last download took place
 	:param high_quality: If to download in higher quality
@@ -54,9 +59,11 @@ def get_podcasts(name, url, last_download: datetime, high_quality=False):
 		date = datetime.strptime(desc['datePublished'], '%Y-%m-%d').date()
 		if date < last_download:
 			continue
-		name = desc['name'].strip('?')
+		series_name = ''.join(series_name.split())
+		episode_name = desc['name'].strip('?')
 		mp3 = requests.get(link).content
-		file_name = f"{date.strftime('%Y%m%d')}-{name}.mp3"
+		file_name = f"{series_name}-{date.strftime('%Y%m%d')}-{episode_name}.mp3"
+		file_name = remove_forbidden_chars(file_name)
 		print(file_name)
 		with open(file_name, 'wb') as f:
 			f.write(mp3)
