@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from tkinter import *
 
 import requests as requests
 
@@ -12,6 +13,23 @@ def remove_forbidden_chars(name: str):
 	"""
 	forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
 	return name.translate({ord(x): '' for x in forbidden_chars})
+
+
+def download(desc, selection):
+	for ep, i in zip(desc, range(len(desc))):
+		if not selection[i].get():
+			continue
+		series_name = ep['series']
+		date = datetime.strptime(ep['datePublished'], '%Y-%m-%d').date()
+		episode_name = ep['name']
+		series_name = ''.join(series_name.split())
+		file_name = f"{series_name}-{date.strftime('%Y%m%d')}-{episode_name}.mp3"
+		file_name = remove_forbidden_chars(file_name)
+		link = ep['link']
+		mp3 = requests.get(link).content
+		with open(file_name, 'wb') as f:
+			f.write(mp3)
+	root.destroy()
 
 
 def get_download_links(data, high_quality=False):
@@ -48,10 +66,16 @@ def load_data():
 	return podcasts_urls
 
 
-def get_podcasts(series_name, url, last_download: datetime, high_quality=False):
+def test(to_download_list):
+	text = ''
+	for val in to_download_list:
+		text += str(val.get())
+	Label(root, text=text).pack()
+
+
+def get_podcasts(url, last_download: datetime, high_quality=False):
 	"""
 	Function to download podcasts and save them
-	:param series_name: Series title
 	:param url: URL to series download page
 	:param last_download: Date on which last download took place
 	:param high_quality: If to download in higher quality
@@ -60,28 +84,60 @@ def get_podcasts(series_name, url, last_download: datetime, high_quality=False):
 	download_links = get_download_links(data, high_quality)
 	desc = json.loads(data.split('<script type="application/ld+json">')[-1].split('\n')[1])['hasPart']
 	desc = [ep for ep in desc if datetime.strptime(ep['datePublished'], '%Y-%m-%d').date() >= last_download]
-	print(f"There are {len(desc)} podcasts to download")
-	for link, ep in zip(download_links, desc):  # Links are in chronological order
-		date = datetime.strptime(ep['datePublished'], '%Y-%m-%d').date()
-		series_name = ''.join(series_name.split())
-		episode_name = ep['name']
-		file_name = f"{series_name}-{date.strftime('%Y%m%d')}-{episode_name}.mp3"
-		file_name = remove_forbidden_chars(file_name)
-		download = ''
-		while download != 'y' and download != 'n':
-			download = input(f'Press y to download {file_name} and n to skip it')
-		if download == 'y':
-			mp3 = requests.get(link).content
-			with open(file_name, 'wb') as f:
-				f.write(mp3)
+	for i in range(len(desc)):
+		desc[i]['link'] = download_links[i]
+
+	return desc
+
+
+def choose_podcasts(podcasts):
+	desc = []
+	for k, v in podcasts.items():
+		for episode in v:
+			episode['series'] = k
+		desc += v
+
+	Label(root, text='Select podcasts to download', font='Arial 20 bold').pack()
+	selection = [IntVar() for _ in range(len(desc))]
+	print("Creating checklist")
+	checklist = []
+
+	for episode in desc:
+		try:
+			if episode['series'] != checklist[-1] and episode['series'] != checklist[-1]['series']:
+				checklist.append(episode['series'])
+		except IndexError:
+			checklist.append(episode['series'])
+		checklist.append(episode)
+	print(checklist)
+	counter = 0
+	for c, i in zip(checklist, range(len(checklist))):
+		if isinstance(c, str):
+			Label(root, text=c, font='Arial 15 bold').pack()
+		else:
+			box = Checkbutton(root,
+			                  text=desc[counter]['name'],
+			                  variable=selection[counter]
+			                  )
+			box.select()
+			box.pack()
+			counter += 1
+	Button(root, text='Download', command=lambda: download(desc, selection)).pack()
+	root.mainloop()
 
 
 def main():
 	podcasts_urls = load_data()
 	last_download = datetime.strptime(input("Enter last download date in %Y-%m-%d format"), '%Y-%m-%d').date()
+	podcasts = {}
 	for name, url in podcasts_urls.items():
-		get_podcasts(name, url, last_download)
+		podcasts[name] = get_podcasts(url, last_download)
+	choose_podcasts(podcasts)
 
 
 if __name__ == '__main__':
+	root = Tk()
+	root.title("BBC podcast downloader")
+	root.iconbitmap('icon.ico')
+	root.geometry("400x400")
 	main()
