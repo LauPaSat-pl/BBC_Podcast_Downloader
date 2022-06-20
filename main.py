@@ -5,7 +5,12 @@ import requests as requests
 
 
 def remove_forbidden_chars(name: str):
-	forbidden_chars = ['<','>',':','"','/','\\','|','?','*']
+	"""
+	Function to remove characters that are forbidden in a file name on Windows from file name
+	:param name: Name to be modified
+	:return: Correct name
+	"""
+	forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
 	return name.translate({ord(x): '' for x in forbidden_chars})
 
 
@@ -53,20 +58,22 @@ def get_podcasts(series_name, url, last_download: datetime, high_quality=False):
 	"""
 	data = requests.get(url).text
 	download_links = get_download_links(data, high_quality)
-	descriptions = json.loads(data.split('<script type="application/ld+json">')[-1].split('\n')[1])['hasPart']
-
-	for link, desc in zip(download_links, descriptions):
-		date = datetime.strptime(desc['datePublished'], '%Y-%m-%d').date()
-		if date < last_download:
-			continue
+	desc = json.loads(data.split('<script type="application/ld+json">')[-1].split('\n')[1])['hasPart']
+	desc = [ep for ep in desc if datetime.strptime(ep['datePublished'], '%Y-%m-%d').date() >= last_download]
+	print(f"There are {len(desc)} podcasts to download")
+	for link, ep in zip(download_links, desc):  # Links are in chronological order
+		date = datetime.strptime(ep['datePublished'], '%Y-%m-%d').date()
 		series_name = ''.join(series_name.split())
-		episode_name = desc['name'].strip('?')
-		mp3 = requests.get(link).content
+		episode_name = ep['name']
 		file_name = f"{series_name}-{date.strftime('%Y%m%d')}-{episode_name}.mp3"
 		file_name = remove_forbidden_chars(file_name)
-		print(file_name)
-		with open(file_name, 'wb') as f:
-			f.write(mp3)
+		download = ''
+		while download != 'y' and download != 'n':
+			download = input(f'Press y to download {file_name} and n to skip it')
+		if download == 'y':
+			mp3 = requests.get(link).content
+			with open(file_name, 'wb') as f:
+				f.write(mp3)
 
 
 def main():
