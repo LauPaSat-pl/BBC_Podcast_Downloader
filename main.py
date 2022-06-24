@@ -1,11 +1,10 @@
 import json
-import os
-import shutil
 from datetime import datetime
 from tkinter import *
 from tkinter import messagebox
 
 import requests as requests
+from mutagen.mp3 import MP3
 
 
 def remove_forbidden_chars(name: str):
@@ -35,6 +34,8 @@ def download(podcasts, selection):
 				episode_name = ep['name']
 				file_name = f"{series_name}-{date.strftime('%Y%m%d')}-{episode_name}.mp3"
 				file_name = remove_forbidden_chars(file_name)
+				if path_to_save != '':
+					file_name = path_to_save + '//' + file_name
 				link = ep['link']
 				mp3 = requests.get(link).content
 				with open(file_name, 'wb') as f:
@@ -178,28 +179,19 @@ def choose_podcasts(podcasts):
 	root.mainloop()
 
 
-def move_podcasts(path):
+def podcast_length(file):
 	"""
-	Function to move podcasts from current working directory to the specified folder
-	:param path: Folder where you want podcasts to be
-	:return:
+	Function to check podcast length
+	:param file: .mp3 file
+	:return: Hours, minutes, seconds tuple
 	"""
-	for file in os.listdir():
-		name, ext = os.path.splitext(file)
-		if ext != '.mp3':
-			continue
 
-		shutil.move(file, path + '//' + file)
-
-
-# audio = MP3(file)
-# duration = int(audio.info.length)
-# hours = duration // 3600
-# minutes = (duration // 60) % 60
-# seconds = duration % 60
-#
-# new_name = f"{name}{ext}"
-# os.rename(file, new_name)
+	audio = MP3(file)
+	duration = int(audio.info.length)
+	hours = duration // 3600
+	minutes = (duration // 60) % 60
+	seconds = duration % 60
+	return hours, minutes, seconds
 
 
 def main():
@@ -212,10 +204,6 @@ def main():
 			messagebox.showerror(message="Error occurred. Please check your internet connection and try again.")
 			return None
 	choose_podcasts(podcasts)
-	print(path_to_save)
-
-	if path_to_save != '':
-		move_podcasts(path_to_save)
 
 
 if __name__ == '__main__':
