@@ -1,3 +1,6 @@
+"""
+Program to download BBC podcasts
+"""
 import json
 from datetime import datetime
 from tkinter import *
@@ -37,27 +40,30 @@ def download(podcasts, selection):
 				if path_to_save != '':
 					file_name = path_to_save + '//' + file_name
 				link = ep['link']
+				# TODO Check if episode already exists in specified path
 				mp3 = requests.get(link).content
 				with open(file_name, 'wb') as f:
 					f.write(mp3)
+				# TODO Show the episode was already downloaded
 		messagebox.showinfo(message="Podcasts downloaded")
-	except Exception as e:
+	except Exception:
 		messagebox.showerror(message="Error occurred. Please check your internet connection and try again.")
 	finally:
 		root.destroy()
 
 
-def get_download_links(data, high_quality=False):
+def get_download_links(data):
 	"""
 	Function to get download links from given site
-	:param high_quality: If to download in higher quality
 	:param data: Website as string (text)
 	:return: List of links
 	"""
 	links = []
 	if high_quality:
+		# noinspection SpellCheckingInspection
 		link_base = '//open.live.bbc.co.uk/mediaselector/6/redir/version/2.0/mediaset/audio-nondrm-download/'
 	else:
+		# noinspection SpellCheckingInspection
 		link_base = '//open.live.bbc.co.uk/mediaselector/6/redir/version/2.0/mediaset/audio-nondrm-download-low/'
 	data = data.split(link_base)
 	for i in range(1, len(data)):
@@ -73,6 +79,7 @@ def load_data():
 	"""
 	global last_download
 	global path_to_save
+	global high_quality
 	podcasts_urls = {}
 	with open("podcasts_url.csv", 'r') as file:
 		raw = file.readlines()[1:]
@@ -82,18 +89,19 @@ def load_data():
 	with open('configure.txt', 'r') as f:
 		last_download = datetime.strptime(f.readline().split('=')[1].strip(), '%Y-%m-%d').date()
 		path_to_save = f.readline().split('=')[1].strip()
+		high_quality = bool(f.readline().split('=')[1].strip())
 
 	return podcasts_urls
 
 
-def get_podcasts(url, high_quality=False):
+def get_podcasts(url):
 	"""
-	Function to download podcasts and save them
+	Function to extract list of podcast episodes given download page
 	:param url: URL to series download page
-	:param high_quality: If to download in higher quality
+	:return: List of podcast episodes
 	"""
 	data = requests.get(url).text
-	download_links = get_download_links(data, high_quality)
+	download_links = get_download_links(data)
 	desc = json.loads(data.split('<script type="application/ld+json">')[-1].split('\n')[1])['hasPart']
 	desc = [ep for ep in desc if datetime.strptime(ep['datePublished'], '%Y-%m-%d').date() >= last_download]
 	for i in range(len(desc)):
@@ -108,7 +116,14 @@ def prepare_screen():
 	:return:
 	"""
 	global frame
+	global root
 	global tooltip
+
+	root = Tk()
+	root.title("BBC podcast downloader")
+	root.iconbitmap('icon.ico')
+	root.geometry("400x400")
+
 	Label(root, text='Select podcasts to download', font='Arial 20 bold').pack()
 	tooltip = Label(root, text='', bd=1, relief=SUNKEN, anchor=E)
 	tooltip.pack(fill=X, side=BOTTOM)
@@ -160,6 +175,7 @@ def choose_podcasts(podcasts):
 
 	frames = []
 	for_tooltip = {}
+	counter = 0
 	for k in podcasts:
 		Label(frame, text=k, font='Arial 15 bold').pack()
 		frames.append(Frame(frame))
@@ -195,20 +211,21 @@ def podcast_length(file):
 
 
 def main():
+	"""
+	Main function of the program
+	:return:
+	"""
 	podcasts_urls = load_data()
 	podcasts = {}
 	for name, url in podcasts_urls.items():
 		try:
 			podcasts[name] = get_podcasts(url)
-		except Exception as e:
+		except Exception:
 			messagebox.showerror(message="Error occurred. Please check your internet connection and try again.")
 			return None
 	choose_podcasts(podcasts)
+	# TODO Save current date as last_download in configure.txt
 
 
 if __name__ == '__main__':
-	root = Tk()
-	root.title("BBC podcast downloader")
-	root.iconbitmap('icon.ico')
-	root.geometry("400x400")
 	main()
