@@ -6,7 +6,6 @@ from tkinter import *
 from tkinter import messagebox
 
 import requests as requests
-from mutagen.mp3 import MP3
 
 
 def remove_forbidden_chars(name: str):
@@ -130,11 +129,22 @@ def prepare_screen():
 
 
 def tooltip_show(e, for_tooltip):
+	"""
+	Function to show episode description
+	:param e: Event that called the function
+	:param for_tooltip: Dictionary pairing checkboxes with episodes
+	:return:
+	"""
 	k = for_tooltip[e.widget]
 	tooltip.config(text=k)
 
 
 def tooltip_hide(e):
+	"""
+	Function to hide episode description
+	:param e: Event that called the function
+	:return:
+	"""
 	tooltip.config(text='')
 
 
@@ -169,22 +179,27 @@ def choose_podcasts(podcasts):
 
 
 def move_podcasts(path):
-	# TODO Work in progress. Currently dead code and storage for code to get audio length
+	"""
+	Function to move podcasts from current working directory to the specified folder
+	:param path: Folder where you want podcasts to be
+	:return:
+	"""
 	for file in os.listdir():
 		name, ext = os.path.splitext(file)
 		if ext != '.mp3':
 			continue
 
-		shutil.move(file, path + file)
+		shutil.move(file, path + '//' + file)
 
-		audio = MP3(file)
-		duration = int(audio.info.length)
-		hours = duration // 3600
-		minutes = (duration // 60) % 60
-		seconds = duration % 60
 
-		new_name = f"{name}{ext}"
-		os.rename(file, new_name)
+# audio = MP3(file)
+# duration = int(audio.info.length)
+# hours = duration // 3600
+# minutes = (duration // 60) % 60
+# seconds = duration % 60
+#
+# new_name = f"{name}{ext}"
+# os.rename(file, new_name)
 
 
 def main():
@@ -197,10 +212,10 @@ def main():
 			messagebox.showerror(message="Error occurred. Please check your internet connection and try again.")
 			return None
 	choose_podcasts(podcasts)
+	print(path_to_save)
 
-
-# if path_to_save != '':
-# move_podcasts()
+	if path_to_save != '':
+		move_podcasts(path_to_save)
 
 
 if __name__ == '__main__':
