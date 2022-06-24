@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from datetime import datetime
 from tkinter import *
 from tkinter import messagebox
@@ -79,8 +80,8 @@ def load_data():
 			name, url = line.strip().split(', ')
 			podcasts_urls[name] = url
 	with open('configure.txt', 'r') as f:
-		last_download = datetime.strptime(f.readline().split(':')[1].strip(), '%Y-%m-%d').date()
-		path_to_save = f.readline().split(':')[1].strip()
+		last_download = datetime.strptime(f.readline().split('=')[1].strip(), '%Y-%m-%d').date()
+		path_to_save = f.readline().split('=')[1].strip()
 
 	return podcasts_urls
 
@@ -167,12 +168,15 @@ def choose_podcasts(podcasts):
 	root.mainloop()
 
 
-def move_podcasts():
+def move_podcasts(path):
 	# TODO Work in progress. Currently dead code and storage for code to get audio length
 	for file in os.listdir():
 		name, ext = os.path.splitext(file)
 		if ext != '.mp3':
 			continue
+
+		shutil.move(file, path + file)
+
 		audio = MP3(file)
 		duration = int(audio.info.length)
 		hours = duration // 3600
