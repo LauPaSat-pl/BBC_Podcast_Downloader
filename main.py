@@ -32,7 +32,7 @@ def download(podcasts, selection):
 	for series in selection:
 		for i in range(len(selection[series])):
 			total += selection[series][i].get()
-	# step must be smaller than 100, so it's shown as 100 is interpreted as 0
+	# step must be smaller than 100, as 100 is shown as 0
 	if total:
 		step = 99.999 / total
 	else:
@@ -100,7 +100,7 @@ def load_data():
 	with open('configure.txt', 'r') as f:
 		last_download = datetime.strptime(f.readline().split('=')[1].strip(), '%Y-%m-%d').date()
 		path_to_save = f.readline().split('=')[1].strip()
-		high_quality = bool(f.readline().split('=')[1].strip())
+		high_quality = (f.readline().split('=')[1].strip()) == 'True'
 
 	return podcasts_urls
 
