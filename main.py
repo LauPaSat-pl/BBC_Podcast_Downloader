@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from tkinter import *
 from tkinter import messagebox
+from tkinter import ttk
 
 import requests as requests
 from mutagen.mp3 import MP3
@@ -27,6 +28,16 @@ def download(podcasts, selection):
 	:param selection: Selection of podcasts to download (1 for podcasts to download and 0 for podcasts to skip)
 	:return:
 	"""
+	total = 0
+	for series in selection:
+		for i in range(len(selection[series])):
+			total += selection[series][i].get()
+	# step must be smaller than 100, so it's shown as 100 is interpreted as 0
+	if total:
+		step = 99.999 / total
+	else:
+		step = 99.999
+		progress_bar.step(step)
 	try:
 		for series in podcasts:
 			series_name = ''.join(series.split())
@@ -40,11 +51,11 @@ def download(podcasts, selection):
 				if path_to_save != '':
 					file_name = path_to_save + '//' + file_name
 				link = ep['link']
-				# TODO Check if episode already exists in specified path
 				mp3 = requests.get(link).content
 				with open(file_name, 'wb') as f:
 					f.write(mp3)
-				# TODO Show the episode was already downloaded
+				progress_bar.step(step)
+				root.update_idletasks()
 		messagebox.showinfo(message="Podcasts downloaded")
 	except Exception:
 		messagebox.showerror(message="Error occurred. Please check your internet connection and try again.")
@@ -104,6 +115,7 @@ def get_podcasts(url):
 	download_links = get_download_links(data)
 	desc = json.loads(data.split('<script type="application/ld+json">')[-1].split('\n')[1])['hasPart']
 	desc = [ep for ep in desc if datetime.strptime(ep['datePublished'], '%Y-%m-%d').date() >= last_download]
+	# TODO Check if episode already exists in specified path
 	for i in range(len(desc)):
 		desc[i]['link'] = download_links[i]
 
@@ -116,6 +128,7 @@ def prepare_screen():
 	:return:
 	"""
 	global frame
+	global progress_bar
 	global root
 	global tooltip
 
@@ -127,6 +140,8 @@ def prepare_screen():
 	Label(root, text='Select podcasts to download', font='Arial 20 bold').pack()
 	tooltip = Label(root, text='', bd=1, relief=SUNKEN, anchor=E)
 	tooltip.pack(fill=X, side=BOTTOM)
+	progress_bar = ttk.Progressbar(root, orient=HORIZONTAL, length=300, mode='determinate')
+	progress_bar.pack(fill=X, side=BOTTOM)
 
 	main_frame = Frame(root)
 	main_frame.pack(fill=BOTH, expand=1)
@@ -155,6 +170,7 @@ def tooltip_show(e, for_tooltip):
 	tooltip.config(text=k)
 
 
+# noinspection PyUnusedLocal
 def tooltip_hide(e):
 	"""
 	Function to hide episode description
@@ -175,7 +191,6 @@ def choose_podcasts(podcasts):
 
 	frames = []
 	for_tooltip = {}
-	counter = 0
 	for k in podcasts:
 		Label(frame, text=k, font='Arial 15 bold').pack()
 		frames.append(Frame(frame))
@@ -210,6 +225,17 @@ def podcast_length(file):
 	return hours, minutes, seconds
 
 
+def update_data():
+	"""
+	Function to update configure.txt
+	:return:
+	"""
+	with open('configure.txt', 'w') as f:
+		f.write(f"last_download = {datetime.today().strftime('%Y-%m-%d')}\n")
+		f.write(f"path = {path_to_save}\n")
+		f.write(f"high_quality = {high_quality}\n")
+
+
 def main():
 	"""
 	Main function of the program
@@ -224,7 +250,7 @@ def main():
 			messagebox.showerror(message="Error occurred. Please check your internet connection and try again.")
 			return None
 	choose_podcasts(podcasts)
-	# TODO Save current date as last_download in configure.txt
+	update_data()
 
 
 if __name__ == '__main__':
