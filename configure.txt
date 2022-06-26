@@ -1,3 +1,3 @@
 last_download = 2022-06-01
-path = D:\Download
+path =
 high_quality = False
