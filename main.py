@@ -2,6 +2,7 @@
 Program to download BBC podcasts
 """
 import json
+import os
 from datetime import datetime
 from tkinter import *
 from tkinter import messagebox
@@ -40,16 +41,10 @@ def download(podcasts, selection):
 		progress_bar.step(step)
 	try:
 		for series in podcasts:
-			series_name = ''.join(series.split())
 			for ep, i in zip(podcasts[series], range(len(series))):
 				if not selection[series][i].get():
 					continue
-				date = datetime.strptime(ep['datePublished'], '%Y-%m-%d').date()
-				episode_name = ep['name']
-				file_name = f"{series_name}-{date.strftime('%Y%m%d')}-{episode_name}.mp3"
-				file_name = remove_forbidden_chars(file_name)
-				if path_to_save != '':
-					file_name = path_to_save + '//' + file_name
+				file_name = ep['file_name']
 				link = ep['link']
 				mp3 = requests.get(link).content
 				with open(file_name, 'wb') as f:
@@ -105,9 +100,10 @@ def load_data():
 	return podcasts_urls
 
 
-def get_podcasts(url):
+def get_podcasts(series_name, url):
 	"""
 	Function to extract list of podcast episodes given download page
+	:param series_name: Series name
 	:param url: URL to series download page
 	:return: List of podcast episodes
 	"""
@@ -118,6 +114,12 @@ def get_podcasts(url):
 	# TODO Check if episode already exists in specified path
 	for i in range(len(desc)):
 		desc[i]['link'] = download_links[i]
+		date = datetime.strptime(desc[i]['datePublished'], '%Y-%m-%d').date()
+		episode_name = desc[i]['name']
+		file_name = f"{series_name}-{date.strftime('%Y%m%d')}-{episode_name}.mp3"
+		file_name = remove_forbidden_chars(file_name)
+		desc[i]['file_name'] = file_name
+	desc = [ep for ep in desc if not (ep['file_name'] in os.listdir())]
 
 	return desc
 
@@ -129,13 +131,7 @@ def prepare_screen():
 	"""
 	global frame
 	global progress_bar
-	global root
 	global tooltip
-
-	root = Tk()
-	root.title("BBC podcast downloader")
-	root.iconbitmap('icon.ico')
-	root.geometry("400x400")
 
 	Label(root, text='Select podcasts to download', font='Arial 20 bold').pack()
 	tooltip = Label(root, text='', bd=1, relief=SUNKEN, anchor=E)
@@ -241,17 +237,24 @@ def main():
 	Main function of the program
 	:return:
 	"""
+	project_location = os.getcwd()
 	podcasts_urls = load_data()
+	os.chdir(path_to_save)
 	podcasts = {}
 	for name, url in podcasts_urls.items():
 		try:
-			podcasts[name] = get_podcasts(url)
+			podcasts[name] = get_podcasts(name, url)
 		except Exception:
 			messagebox.showerror(message="Error occurred. Please check your internet connection and try again.")
 			return None
 	choose_podcasts(podcasts)
+	os.chdir(project_location)
 	update_data()
 
 
 if __name__ == '__main__':
+	root = Tk()
+	root.title("BBC podcast downloader")
+	root.iconbitmap('icon.ico')
+	root.geometry("400x400")
 	main()
